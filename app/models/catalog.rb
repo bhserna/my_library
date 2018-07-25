@@ -47,6 +47,8 @@ module Catalog
     copies_count: 12
   }]
 
+  NO_NAME_ERROR = "Error: No se puede registrar un libro sin nombre"
+
   def self.setup
     DATA.each do |book_data|
       register_book(book_data)
@@ -54,11 +56,14 @@ module Catalog
   end
 
   def self.register_book(attrs)
-    Book.create(attrs)
+    book = Book.new(attrs)
+    return NO_NAME_ERROR unless book.valid?
+    book.save
   end
 
   def self.update_book(id, attrs)
     book = Book.find(id)
+    attrs = attrs.reject { |key, value| value.blank? }
     book.update(attrs)
   end
 
@@ -93,10 +98,12 @@ module Catalog
   end
 
   def self.find_all_by_year(year)
-    #books = Book.all.select do |book|
-      #book.publication_year == year
-    #end
+    # With ruby
+    # books = Book.all.select do |book|
+    #   book.publication_year == year
+    # end
 
+    # With Active Record
     range = Date.new(year, 1, 1)..Date.new(year, 12, 31)
     books = Book.where(published_on: range)
 
@@ -122,7 +129,7 @@ module Catalog
     nil
   end
 
-  def self.author_name_and_books_count
+  def self.author_names_with_books_count
     Book.all.group_by(&:author_name).each do |author_name, books|
       puts "- #{author_name} (#{books.count})"
     end
