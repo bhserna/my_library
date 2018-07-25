@@ -56,15 +56,17 @@ module Catalog
   end
 
   def self.register_book(attrs)
-    book = Book.new(attrs)
+    author = Author.find_or_create_by(name: attrs.delete(:author_name))
+    book = author.books.new(attrs)
     return NO_NAME_ERROR unless book.valid?
     book.save
   end
 
   def self.update_book(id, attrs)
-    book = Book.find(id)
     attrs = attrs.reject { |key, value| value.blank? }
-    book.update(attrs)
+    author = Author.find_or_create_by(name: attrs.delete(:author_name))
+    book = Book.find(id)
+    book.update(attrs.merge(author: author))
   end
 
   def self.delete_book(id)
@@ -98,25 +100,18 @@ module Catalog
   end
 
   def self.find_all_by_year(year)
-    # With ruby
-    # books = Book.all.select do |book|
-    #   book.publication_year == year
-    # end
-
-    # With Active Record
     range = Date.new(year, 1, 1)..Date.new(year, 12, 31)
     books = Book.where(published_on: range)
-
     print_books(books)
   end
 
   def self.find_all_by_author(author_name)
-    books = Book.where(author_name: author_name)
-    print_books(books)
+    author = Author.find_by(name: author_name)
+    print_books(author.books)
   end
 
   def self.author_names
-    Book.pluck(:author_name).uniq.each do |name|
+    Author.pluck(:name).uniq.each do |name|
       puts "- #{name}"
     end
     nil
@@ -130,8 +125,8 @@ module Catalog
   end
 
   def self.author_names_with_books_count
-    Book.all.group_by(&:author_name).each do |author_name, books|
-      puts "- #{author_name} (#{books.count})"
+    Author.includes(:books).each do |author, books|
+      puts "- #{author.name} (#{author.books.size})"
     end
     nil
   end
